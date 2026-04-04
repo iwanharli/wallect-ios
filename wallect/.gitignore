@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+*.attachments
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm
+.eslintcache
+.stylelintcache
+.node_repl_history
+
+# Prisma
+wallect-api/prisma/migrations/
+wallect-api/.env
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/

@@ -1,0 +1,6 @@
+wallect-api/
+.DS_Store
+DerivedData/
+*.xcworkspace/
+xcuserdata/
+
