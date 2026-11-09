@@ -2,8 +2,10 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .home
     @State private var showingAddTransaction = false
+    @StateObject private var navigationState = NavigationState()
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -16,8 +18,8 @@ struct ContentView: View {
                     AnalyticsView()
                 case .wallets:
                     WalletsView()
-                case .settings:
-                    SettingsView()
+                case .categories:
+                    CategoryManagerView()
                 default:
                     HomeView()
                 }
@@ -26,13 +28,26 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.2), value: selectedTab)
             
             // Premium Bottom Navigation Bar
-            BottomNavBar(selectedTab: $selectedTab, showingAddTransaction: $showingAddTransaction)
+            if !navigationState.isTabBarHidden {
+                BottomNavBar(selectedTab: $selectedTab, showingAddTransaction: $showingAddTransaction)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(100)
+            }
         }
+        .environmentObject(navigationState)
         .ignoresSafeArea(.keyboard)
         .sheet(isPresented: $showingAddTransaction) {
             AddTransactionView()
                 .presentationDetents([.fraction(0.85)])
                 .presentationDragIndicator(.visible)
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .background {
+                // Force dismiss keyboard when app goes to background
+                #if !WIDGET_EXTENSION
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                #endif
+            }
         }
     }
 }
@@ -43,70 +58,119 @@ struct BottomNavBar: View {
     @State private var pulsing = false
     
     var body: some View {
-        HStack {
-            ForEach(Tab.allCases, id: \.self) { tab in
-                if tab == .add {
-                    Button(action: {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        showingAddTransaction.toggle()
-                    }) {
-                        Circle()
-                            .fill(Theme.accent)
-                            .frame(width: 52, height: 52)
-                            .overlay(
-                                Image(systemName: "plus")
-                                    .font(.title3.bold())
-                                    .foregroundColor(.black)
+        GeometryReader { proxy in
+            let totalWidth = proxy.size.width
+            let tabCount = CGFloat(Tab.allCases.count)
+            let itemWidth = totalWidth / tabCount
+            
+            ZStack(alignment: .leading) {
+                // Background Glass
+                ZStack {
+                    BlurView(style: .systemThinMaterialDark)
+                        .clipShape(Capsule())
+                    
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)], 
+                                startPoint: .topLeading, 
+                                endPoint: .bottomTrailing
+                            ), 
+                            lineWidth: 1
+                        )
+                }
+                .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 10)
+                
+                // Sliding Highlight Indicator
+                let activeIndex = CGFloat(Tab.allCases.firstIndex(of: selectedTab) ?? 0)
+                let indicatorOffset = activeIndex * itemWidth
+                
+                ZStack {
+                    // Ambient Glow
+                    Capsule()
+                        .fill(Theme.accent.opacity(0.15))
+                        .blur(radius: 8)
+                    
+                    // Main Highlight
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Theme.accent.opacity(0.1), Theme.accent.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
-                            .scaleEffect(pulsing ? 1.07 : 1.0)
-                            .shadow(color: Theme.accent.opacity(pulsing ? 0.55 : 0.3), radius: pulsing ? 15 : 10, x: 0, y: 5)
-                    }
-                    .offset(y: -15)
-                    .onAppear {
-                        withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                            pulsing = true
+                        )
+                }
+                .frame(width: itemWidth - 16, height: 44)
+                .offset(x: indicatorOffset + 8)
+                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: selectedTab)
+                
+                // Tabs
+                HStack(spacing: 0) {
+                    ForEach(Tab.allCases, id: \.self) { tab in
+                        if tab == .add {
+                            // Central Smart Add Button
+                            Button(action: {
+                                HapticManager.shared.impact(.heavy)
+                                showingAddTransaction.toggle()
+                            }) {
+                                ZStack {
+                                    // Outer tactical pulse
+                                    Circle()
+                                        .stroke(Theme.accent.opacity(pulsing ? 0.4 : 0.1), lineWidth: 2)
+                                        .frame(width: 58, height: 58)
+                                        .scaleEffect(pulsing ? 1.15 : 1.0)
+                                        .opacity(pulsing ? 0 : 1)
+                                    
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Theme.accent, Theme.accent.opacity(0.8)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 52, height: 52)
+                                        .overlay(
+                                            Image(systemName: "plus")
+                                                .font(.title3.bold())
+                                                .foregroundColor(.black)
+                                                .rotationEffect(.degrees(showingAddTransaction ? 45 : 0))
+                                        )
+                                }
+                                .shadow(color: Theme.accent.opacity(0.3), radius: pulsing ? 15 : 10, x: 0, y: 5)
+                            }
+                            .offset(y: -15)
+                            .frame(width: itemWidth)
+                            .onAppear {
+                                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false)) {
+                                    pulsing = true
+                                }
+                            }
+                        } else {
+                            // Regular Tab with Micro-Animations
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    selectedTab = tab
+                                }
+                            }) {
+                                Image(systemName: tab.rawValue)
+                                    .font(.system(size: 20))
+                                    .symbolVariant(selectedTab == tab ? .fill : .none)
+                                    .scaleEffect(selectedTab == tab ? 1.25 : 1.0)
+                                    .foregroundColor(selectedTab == tab ? Theme.accent : Theme.textSecondary)
+                                    .frame(width: itemWidth, height: 64)
+                                    .contentShape(Rectangle())
+                            }
                         }
                     }
-                } else {
-                    // Regular Tab Button
-                    Spacer()
-                    Button(action: {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedTab = tab
-                        }
-                    }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: tab.rawValue)
-                                .font(.system(size: 18))
-                                .foregroundColor(selectedTab == tab ? Theme.accent : Theme.textSecondary)
-                            
-                            Text(tab.title)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(selectedTab == tab ? Theme.accent : Theme.textSecondary)
-                        }
-                        .frame(width: 60)
-                    }
-                    Spacer()
                 }
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                // Blur Effect (Glassmorphism)
-                BlurView(style: .systemThinMaterialDark)
-                    .clipShape(Capsule())
-                
-                // Outer Stroke
-                Capsule()
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-            }
-        )
+        .frame(height: 64)
         .padding(.horizontal, 15)
         .padding(.bottom, 10)
-        .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 10)
     }
 }
 

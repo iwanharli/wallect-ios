@@ -35,7 +35,7 @@ struct SettingsView: View {
                                 Text("Nama Tampilan")
                                     .font(.caption)
                                     .foregroundColor(Theme.textSecondary)
-                                TextField("Nama Anda", text: $userName)
+                                TextField("Nama Kamu", text: $userName)
                                     .font(.subheadline.bold())
                                     .foregroundColor(Theme.textMain)
                             }

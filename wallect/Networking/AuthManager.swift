@@ -1,14 +1,21 @@
 import SwiftUI
 import Combine
 import AuthenticationServices
+#if canImport(GoogleSignIn)
 import GoogleSignIn
 import GoogleSignInSwift
+#endif
 
 class AppAuthManager: ObservableObject {
     static let shared = AppAuthManager()
     
     @Published var isAuthenticated: Bool = false
     @Published var currentUser: UserDTO?
+    @Published var profileImage: UIImage?
+    
+    // Biometric Lock States
+    @Published var isLocked: Bool = false
+    @AppStorage("isBiometricEnabled") var isBiometricEnabled: Bool = false
     
     // Real Google Client ID
     static let googleClientID = "380422483162-4gvspvvmsc0sacmvc2u8e5srkpdnmrul.apps.googleusercontent.com"
@@ -24,6 +31,11 @@ class AppAuthManager: ObservableObject {
         if UserDefaults.standard.string(forKey: tokenKey) != nil {
             self.isAuthenticated = true
             
+            // Set initial lock state
+            if isBiometricEnabled {
+                self.isLocked = true
+            }
+            
             // Load cached user
             if let userData = UserDefaults.standard.data(forKey: userKey),
                let cachedUser = try? JSONDecoder().decode(UserDTO.self, from: userData) {
@@ -33,10 +45,15 @@ class AppAuthManager: ObservableObject {
             // Fetch fresh profile from backend
             Task {
                 await fetchUserProfile()
+                await MainActor.run {
+                    self.loadLocalProfileImage()
+                }
             }
             
+            #if canImport(GoogleSignIn)
             // Try to restore Google session in background
             GIDSignIn.sharedInstance.restorePreviousSignIn { _, _ in }
+            #endif
         }
     }
     
@@ -74,8 +91,12 @@ class AppAuthManager: ObservableObject {
         // Save Token
         saveToken(authResponse.token)
         saveUser(authResponse.user)
-        self.currentUser = authResponse.user
-        self.isAuthenticated = true
+        
+        await MainActor.run {
+            self.currentUser = authResponse.user
+            self.isAuthenticated = true
+            self.loadLocalProfileImage()
+        }
     }
     
     func loginWithApple(identityToken: String, email: String, name: String, appleId: String) async throws {
@@ -98,16 +119,23 @@ class AppAuthManager: ObservableObject {
         // Save Token
         saveToken(authResponse.token)
         saveUser(authResponse.user)
-        self.currentUser = authResponse.user
-        self.isAuthenticated = true
+        
+        await MainActor.run {
+            self.currentUser = authResponse.user
+            self.isAuthenticated = true
+            self.loadLocalProfileImage()
+        }
     }
     
     func logout() {
+        #if canImport(GoogleSignIn)
         GIDSignIn.sharedInstance.signOut()
+        #endif
         UserDefaults.standard.removeObject(forKey: tokenKey)
         UserDefaults.standard.removeObject(forKey: userKey)
         self.isAuthenticated = false
         self.currentUser = nil
+        self.profileImage = nil
     }
     
     private func saveToken(_ token: String) {
@@ -117,6 +145,65 @@ class AppAuthManager: ObservableObject {
     private func saveUser(_ user: UserDTO) {
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: userKey)
+        }
+    }
+    
+    // MARK: - Local Profile Image Persistence
+    private func profileImageName(for userId: String) -> String {
+        return "user_profile_\(userId).jpg"
+    }
+    
+    func saveLocalProfileImage(data: Data) {
+        guard let userId = currentUser?.id else { return }
+        guard let url = getDocumentsDirectory()?.appendingPathComponent(profileImageName(for: userId)) else { return }
+        
+        do {
+            try data.write(to: url)
+            if let image = UIImage(data: data) {
+                DispatchQueue.main.async {
+                    self.profileImage = image
+                }
+            }
+        } catch {
+            print("Error saving local profile image: \(error.localizedDescription)")
+        }
+    }
+    
+    private func loadLocalProfileImage() {
+        guard let userId = currentUser?.id else { 
+            self.profileImage = nil
+            return 
+        }
+        guard let url = getDocumentsDirectory()?.appendingPathComponent(profileImageName(for: userId)) else { return }
+        
+        if FileManager.default.fileExists(atPath: url.path),
+           let data = try? Data(contentsOf: url),
+           let image = UIImage(data: data) {
+            self.profileImage = image
+        } else {
+            self.profileImage = nil
+        }
+    }
+    
+    private func getDocumentsDirectory() -> URL? {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+    }
+    
+    // MARK: - Biometric Actions
+    
+    @MainActor
+    func unlockWithBiometrics() async {
+        let success = await BiometricAuthService.shared.authenticate(reason: "Buka kunci Wallect Kamu")
+        if success {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                self.isLocked = false
+            }
+        }
+    }
+    
+    func lockApp() {
+        if isBiometricEnabled && isAuthenticated {
+            self.isLocked = true
         }
     }
 }

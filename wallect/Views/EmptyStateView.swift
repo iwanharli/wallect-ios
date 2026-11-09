@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct EmptyStateView: View {
-    let action: () -> Void
     @State private var pulse = false
     
     var body: some View {
@@ -28,23 +27,13 @@ struct EmptyStateView: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(Theme.textMain)
                 
-                Text("Tap tombol + untuk mulai mencatat keuangan Anda, atau buat data contoh di bawah.")
+                Text("Tap tombol + untuk mulai mencatat keuangan Kamu.")
                     .font(.system(size: 14))
                     .foregroundColor(Theme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
             }
-            
-            Button(action: action) {
-                Text("Buat Data Contoh")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(Theme.accent)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Theme.accent.opacity(0.1))
-                    .cornerRadius(12)
-            }
-            .padding(.top, 10)
+            .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 50)

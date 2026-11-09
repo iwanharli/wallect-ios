@@ -4,7 +4,7 @@ import SwiftData
 // MARK: - Animated Currency Display
 struct AnimatedCurrencyText: View, Animatable {
     var value: Double
-    var font: Font = .system(size: 34, weight: .bold, design: .rounded)
+    var font: Font = .system(size: 36, weight: .black, design: .rounded)
     var color: Color = .white
     
     var animatableData: Double {
@@ -22,208 +22,177 @@ struct AnimatedCurrencyText: View, Animatable {
 }
 
 struct HomeView: View {
+    static var didInitialLoad = false
     @Environment(\.modelContext) var modelContext
+    @EnvironmentObject var navigationState: NavigationState
     @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
     @Query var wallets: [Wallet]
+    @Query var budgets: [Budget]
     @Query var categories: [Category]
+    @Query var debts: [Debt]
+    
+    @AppStorage("isDebtFeatureEnabled") var isDebtFeatureEnabled = false
     @AppStorage("userName") private var userName: String = "User"
     @State private var showingEditTransaction: Transaction? = nil
     @State private var showingAllTransactions = false
     @State private var showingProfile = false
     @State private var showingLogoutAlert = false
+    @State private var showingAddBudget = false
+    @State private var showingEditBudget: Budget? = nil
+    @State private var showingBudgetDetail: Budget? = nil
+    @State private var showingBudgetHistory = false
+    @State private var showingStocks = false
+    @State private var showingTransfer = false
+    @State private var showingDebtList = false
     @State private var appeared = false
+    @State private var isLoading = true
+    @State private var historyFilter: String = "Semua"
+
     
     @ObservedObject var authManager = AppAuthManager.shared
     
     private var totalBalance: Double {
-        let initial = wallets.reduce(0) { $0 + $1.initialBalance }
-        let income = transactions.filter { !$0.isExpense }.reduce(0) { $0 + $1.amount }
-        let expense = transactions.filter { $0.isExpense }.reduce(0) { $0 + $1.amount }
-        return initial + income - expense
+        wallets.reduce(0) { $0 + $1.currentBalance }
     }
     
     private var totalIncomeMonth: Double {
         let calendar = Calendar.current
         return transactions.filter {
-            !$0.isExpense && calendar.isDate($0.date, equalTo: .now, toGranularity: .month)
+            !$0.isExpense && 
+            !$0.isSystem && 
+            calendar.isDate($0.date, equalTo: .now, toGranularity: .month)
         }.reduce(0) { $0 + $1.amount }
     }
     
     private var totalExpenseMonth: Double {
         let calendar = Calendar.current
         return transactions.filter {
-            $0.isExpense && calendar.isDate($0.date, equalTo: .now, toGranularity: .month)
+            $0.isExpense && 
+            !$0.isSystem && 
+            calendar.isDate($0.date, equalTo: .now, toGranularity: .month)
         }.reduce(0) { $0 + $1.amount }
     }
     
+    private var goalWallets: [Wallet] {
+        wallets.filter { $0.isGoal && !$0.isArchived }
+    }
+    
+    private var isAnyOverlayShowing: Bool {
+        showingAllTransactions || showingProfile || showingBudgetDetail != nil || showingBudgetHistory
+    }
+    
     var body: some View {
-        ZStack {
-            Theme.background.ignoresSafeArea()
-            
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 25) {
-                    // Header
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Selamat Datang,")
-                                .font(.subheadline)
-                                .foregroundColor(Theme.textSecondary)
-                            Text(authManager.currentUser?.name ?? userName)
-                                .font(.title2.bold())
-                                .foregroundColor(Theme.textMain)
-                        }
-                        Spacer()
-                        Menu {
-                            Button {
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                showingProfile = true
-                            } label: {
-                                Label("Lihat Profil", systemImage: "person.crop.circle")
-                            }
-                        } label: {
-                            Circle()
-                                .fill(Theme.glassGradient)
-                                .frame(width: 44, height: 44)
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .foregroundColor(.white)
-                                )
-                        }
+        NavigationStack {
+            ZStack {
+                // Main Content Layer
+                ZStack {
+                    Theme.DynamicBackground()
+                    
+                    if isLoading {
+                        HomeSkeletonView()
+                            .transition(.opacity)
+                    } else {
+                        mainDashboard()
+                            .transition(.opacity)
                     }
-                    .padding(.horizontal)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : -10)
-                    
-                    // Wallets Horizontal Overview
-                    if !wallets.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(wallets) { wallet in
-                                    let walletBalance = wallet.initialBalance + (wallet.transactions?.reduce(0) { $0 + ($1.isExpense ? -$1.amount : $1.amount) } ?? 0)
-                                    
-                                    HStack(spacing: 8) {
-                                        Image(systemName: wallet.icon)
-                                            .font(.caption)
-                                            .foregroundColor(Theme.walletAccent(for: wallet.walletType))
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(wallet.name)
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(Theme.textSecondary)
-                                            Text(CurrencyFormatter.format(walletBalance))
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(Theme.textMain)
-                                        }
-                                    }
-                                    .padding(.horizontal, 15)
-                                    .padding(.vertical, 10)
-                                    .background(
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 15)
-                                                .fill(Theme.cardBackground.opacity(0.5))
-                                            RoundedRectangle(cornerRadius: 15)
-                                                .fill(Theme.walletGradient(for: wallet.walletType))
-                                                .opacity(0.12)
-                                            RoundedRectangle(cornerRadius: 15)
-                                                .stroke(Theme.walletAccent(for: wallet.walletType).opacity(0.2), lineWidth: 1)
-                                        }
-                                    )
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 15)
-                    }
-                    
-                    // Balance Card
-                    BalanceCard(
-                        balance: totalBalance,
-                        income: totalIncomeMonth,
-                        expense: totalExpenseMonth
-                    )
-                    .padding(.horizontal)
-                    .opacity(appeared ? 1 : 0)
-                    .scaleEffect(appeared ? 1 : 0.95)
-                    
-                    // Transactions List
-                    VStack(alignment: .leading, spacing: 15) {
-                        HStack {
-                            Text("Transaksi Terakhir")
-                                .font(.headline)
-                                .foregroundColor(Theme.textMain)
-                            Spacer()
-                            if !transactions.isEmpty {
-                                Button(action: {
-                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                    showingAllTransactions = true
-                                }) {
-                                    Text("Lihat Semua")
-                                        .font(.subheadline)
-                                        .foregroundColor(Theme.accent)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        .opacity(appeared ? 1 : 0)
-                        
-                        if transactions.isEmpty {
-                            EmptyStateView(action: seedDummyData)
-                                .opacity(appeared ? 1 : 0)
-                        } else {
-                            List {
-                                ForEach(Array(transactions.prefix(6).enumerated()), id: \.element.id) { index, transaction in
-                                    TransactionRow(transaction: transaction)
-                                        .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
-                                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                                        .onTapGesture {
-                                            showingEditTransaction = transaction
-                                        }
-                                        .swipeActions(edge: .trailing) {
-                                            Button(role: .destructive) {
-                                                deleteTransaction(transaction)
-                                            } label: {
-                                                Label("Hapus", systemImage: "trash")
-                                            }
-                                        }
-                                        .opacity(appeared ? 1 : 0)
-                                        .offset(y: appeared ? 0 : 20)
-                                        .animation(
-                                            .spring(response: 0.5, dampingFraction: 0.7)
-                                            .delay(Double(index) * 0.08 + 0.3),
-                                            value: appeared
-                                        )
-                                }
-                            }
-                            .listStyle(.plain)
-                            .scrollContentBackground(.hidden)
-                            .scrollDisabled(true)
-                            .frame(height: CGFloat(min(transactions.count, 6)) * 95) // Increased multiplier to prevent truncation
-                        }
-                    }
-                    
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(height: 120)
                 }
-                .padding(.top, 20)
+                .blur(radius: isAnyOverlayShowing ? 15 : 0)
+                .scaleEffect(isAnyOverlayShowing ? 0.94 : 1.0)
+                .opacity(isAnyOverlayShowing ? 0.3 : 1.0)
+                .animation(.spring(response: 0.55, dampingFraction: 0.82), value: isAnyOverlayShowing)
+                
+                // Transaction History View
+                if showingAllTransactions {
+                    AllTransactionsView(
+                        isPresented: Binding(
+                            get: { showingAllTransactions },
+                            set: { 
+                                showingAllTransactions = $0
+                                if !$0 { historyFilter = "Semua" } // Reset filter on close
+                            }
+                        ),
+                        initialType: historyFilter
+                    )
+                    .transition(.move(edge: .trailing))
+                    .zIndex(10)
+                }
+                
+                // User Profile View
+                if showingProfile {
+                    ProfileView(isPresented: $showingProfile)
+                        .transition(.move(edge: .trailing))
+                        .zIndex(11)
+                }
+                
+                // Budget Detail View
+                if let budget = showingBudgetDetail {
+                    BudgetDetailView(isPresented: Binding(
+                        get: { showingBudgetDetail != nil },
+                        set: { if !$0 { showingBudgetDetail = nil } }
+                    ), budget: budget)
+                    .transition(.move(edge: .trailing))
+                    .zIndex(12)
+                }
+                
+                // Budget History View (RTL)
+                if showingBudgetHistory {
+                    BudgetHistoryView(isPresented: $showingBudgetHistory)
+                        .transition(.move(edge: .trailing))
+                        .zIndex(13)
+                }
             }
-        }
-        .fullScreenCover(isPresented: $showingAllTransactions) {
-            AllTransactionsView()
-        }
-        .fullScreenCover(isPresented: $showingProfile) {
-            ProfileView()
+            .onChange(of: isAnyOverlayShowing) { old, newValue in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    navigationState.isTabBarHidden = newValue
+                }
+            }
+            .navigationBarHidden(true)
         }
         .sheet(item: $showingEditTransaction) { transaction in
             AddTransactionView(editTransaction: transaction)
                 .presentationDetents([.fraction(0.85)])
         }
+        .fullScreenCover(isPresented: $showingStocks) {
+            StocksDummyView()
+        }
+        .sheet(isPresented: $showingAddBudget) {
+            AddBudgetView()
+                .presentationDetents([.fraction(0.85)])
+        }
+        .sheet(item: $showingEditBudget) { budget in
+            AddBudgetView(editBudget: budget)
+                .presentationDetents([.fraction(0.85)])
+        }
+        .sheet(isPresented: $showingTransfer) {
+            TransferView()
+                .presentationDetents([.fraction(0.8)])
+        }
+        .fullScreenCover(isPresented: $showingDebtList) {
+            DebtListView(isPresented: $showingDebtList)
+        }
         .onAppear {
+            if HomeView.didInitialLoad {
+                isLoading = false
+            } else if isLoading {
+                Task {
+                    // Reduce delay for snappier feel
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    HomeView.didInitialLoad = true
+                    await MainActor.run {
+                        withAnimation(.easeInOut(duration: 0.6)) {
+                            isLoading = false
+                        }
+                    }
+                }
+            }
+            
             withAnimation(.easeOut(duration: 0.6)) {
                 appeared = true
             }
             Task {
+                // Background Sync: Strategic delay to allow navigation transition to finish smoothly
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                await SyncManager.shared.processQueue(context: modelContext)
                 await SyncService.shared.fetchAll(context: modelContext)
             }
         }
@@ -233,35 +202,248 @@ struct HomeView: View {
                 performLogout()
             }
         } message: {
-            Text("Apakah Anda yakin ingin keluar? Data lokal akan dihapus untuk keamanan.")
+            Text("Apakah Kamu yakin ingin keluar? Data lokal akan dihapus untuk keamanan.")
+        }
+    }
+    
+    // MARK: - Subviews
+    
+    @ViewBuilder
+    private func mainDashboard() -> some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 25) {
+                // Header
+                UnifiedHeaderCard(
+                    userName: authManager.currentUser?.name ?? userName,
+                    totalBalance: totalBalance,
+                    monthlyIncome: totalIncomeMonth,
+                    monthlyExpense: totalExpenseMonth,
+                    profileAction: {
+                        HapticManager.shared.impact(.medium)
+                        withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                            showingProfile = true
+                        }
+                    },
+                    incomeAction: {
+                        HapticManager.shared.impact(.medium)
+                        historyFilter = "Pemasukan"
+                        withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                            showingAllTransactions = true
+                        }
+                    },
+                    expenseAction: {
+                        HapticManager.shared.impact(.medium)
+                        historyFilter = "Pengeluaran"
+                        withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                            showingAllTransactions = true
+                        }
+                    }
+                )
+                .padding(.horizontal)
+                
+                // Goals Section
+                if !goalWallets.isEmpty {
+                    VStack(alignment: .leading, spacing: 15) {
+                        HStack {
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.cyan.opacity(0.15))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "target")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.cyan)
+                            }
+                            
+                            Text("Targetmu")
+                                .font(.system(size: 18, weight: .black, design: .rounded))
+                                .foregroundColor(Theme.textMain)
+                        }
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(Array(goalWallets.enumerated()), id: \.element.id) { index, goal in
+                                    NavigationLink(destination: WalletDetailView(wallet: goal)) {
+                                        HomeGoalCard(goal: goal, index: index)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                // Budgets Section
+                VStack(alignment: .leading, spacing: 15) {
+                    HStack {
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.orange.opacity(0.15))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "chart.bar.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.orange)
+                            }
+                            
+                            Text("Anggaranmu")
+                                .font(.system(size: 18, weight: .black, design: .rounded))
+                                .foregroundColor(Theme.textMain)
+                        }
+                        Spacer()
+                        
+                        HStack(spacing: 15) {
+                            Button(action: { 
+                                HapticManager.shared.impact(.medium)
+                                withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                                    showingBudgetHistory = true 
+                                }
+                            }) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .foregroundColor(Theme.textSecondary)
+                                    .font(.title3)
+                                    .padding(8)
+                            }
+                            .contentShape(Rectangle())
+                            
+                            Button(action: { 
+                                HapticManager.shared.impact(.medium)
+                                showingAddBudget = true 
+                            }) {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(Theme.accent)
+                                    .font(.title3)
+                                    .padding(8)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                    }
+                    
+                    let activeBudgets = budgets.filter { $0.isActive }
+                        .sorted { ($0.endDate ?? Date.distantFuture) < ($1.endDate ?? Date.distantFuture) }
+                    
+                    if activeBudgets.isEmpty {
+                        Text("Belum ada anggaran aktif. Tap + untuk membuat.")
+                            .font(.caption)
+                            .foregroundColor(Theme.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                    } else {
+                        VStack(spacing: 20) {
+                            ForEach(activeBudgets) { budget in
+                                BudgetRow(budget: budget, transactions: transactions) {
+                                    HapticManager.shared.impact(.medium)
+                                    withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                                        showingBudgetDetail = budget
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.bottom, 30)
+                    }
+                }
+                .padding(.horizontal)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 20)
+                
+                // Transactions List
+                VStack(alignment: .leading, spacing: 15) {
+                    HStack {
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(Theme.income.opacity(0.15))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "clock.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(Theme.income)
+                            }
+                            
+                            Text("Transaksi Terakhir")
+                                .font(.system(size: 18, weight: .black, design: .rounded))
+                                .foregroundColor(Theme.textMain)
+                        }
+                        Spacer()
+                        if !transactions.isEmpty {
+                            Button(action: {
+                                HapticManager.shared.impact(.medium)
+                                withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                                    showingAllTransactions = true
+                                }
+                            }) {
+                                Text("Lihat Semua")
+                                    .font(.system(size: 11, weight: .black))
+                                    .foregroundColor(Theme.accent)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Theme.accent.opacity(0.1))
+                                    .cornerRadius(10)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                    }
+                    .opacity(appeared ? 1 : 0)
+                    
+                    if transactions.isEmpty {
+                        EmptyStateView()
+                            .opacity(appeared ? 1 : 0)
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(Array(transactions.prefix(5).enumerated()), id: \.element.id) { index, transaction in
+                                TransactionRow(transaction: transaction)
+                                    .onTapGesture {
+                                        if !transaction.isSystem {
+                                            showingEditTransaction = transaction
+                                        }
+                                    }
+                                    .swipeActions(edge: .trailing) {
+                                        if !transaction.isSystem {
+                                            Button(role: .destructive) {
+                                                deleteTransaction(transaction)
+                                            } label: {
+                                                Label("Hapus", systemImage: "trash")
+                                            }
+                                        }
+                                    }
+                                    .opacity(appeared ? 1 : 0)
+                                    .offset(y: appeared ? 0 : 20)
+                                    .animation(
+                                        .spring(response: 0.55, dampingFraction: 0.82)
+                                        .delay(Double(index) * 0.08 + 0.3),
+                                        value: appeared
+                                    )
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 20)
+                .padding(.bottom, 120)
+            }
+            .padding(.top, 20)
+        }
+        .refreshable {
+            HapticManager.shared.impact(.medium)
+            await SyncManager.shared.processQueue(context: modelContext)
+            await SyncService.shared.fetchAll(context: modelContext)
         }
     }
     
     private func performLogout() {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        HapticManager.shared.impact(.medium)
         PersistenceService.shared.clearAllData(context: modelContext)
         authManager.logout()
     }
     
     private func deleteTransaction(_ transaction: Transaction) {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        HapticManager.shared.impact(.medium)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             TransactionService.shared.deleteTransaction(transaction, context: modelContext)
-        }
-    }
-    
-    private func seedDummyData() {
-        let dummyData = [
-            Transaction(title: "Gaji Bulanan", amount: 15000000, category: "Work", isExpense: false),
-            Transaction(title: "Makan Siang Bakso", amount: 25000, category: "Food", isExpense: true),
-            Transaction(title: "Bensin Motor", amount: 50000, category: "Transport", isExpense: true),
-            Transaction(title: "Langganan Netflix", amount: 186000, category: "Entertainment", isExpense: true),
-            Transaction(title: "Belanja Bulanan", amount: 750000, category: "Shopping", isExpense: true),
-            Transaction(title: "Bonus Project", amount: 2500000, category: "Work", isExpense: false),
-            Transaction(title: "Tiket Bioskop", amount: 50000, category: "Entertainment", isExpense: true)
-        ]
-        for transaction in dummyData {
-            modelContext.insert(transaction)
         }
     }
 }
@@ -360,6 +542,137 @@ struct BalanceCard: View {
         .onAppear {
             withAnimation { appeared = true }
         }
+    }
+}
+
+struct HomeGoalCard: View {
+    let goal: Wallet
+    let index: Int
+    
+    private var progress: Double {
+        guard let target = goal.targetAmount, target > 0 else { return 0 }
+        return min(max(goal.currentBalance / target, 0), 1)
+    }
+    
+    private var formattedDate: String? {
+        guard let endDate = goal.endDate else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM yyyy"
+        return formatter.string(from: endDate)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            // Header: Icon & Progress Tag
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    
+                    Image(systemName: goal.icon)
+                        .font(.system(size: 16, weight: .black))
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                Text("\(Int(progress * 100))%")
+                    .font(.system(size: 11, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.accent.opacity(0.2))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Theme.accent.opacity(0.3), lineWidth: 0.5)
+                    )
+            }
+            
+            // Body: Name & Date Badge
+            VStack(alignment: .leading, spacing: 6) {
+                Text(goal.name)
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                if let date = formattedDate {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 10))
+                        Text(date)
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundColor(.white.opacity(0.5))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.05))
+                    .cornerRadius(6)
+                }
+            }
+            
+            Spacer(minLength: 0)
+            
+            // Footer: Progress Details & Bar
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .bottom) {
+                    NominalText(amount: goal.currentBalance, size: 14, color: .white)
+                    Spacer()
+                    Text("/")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.3))
+                    NominalText(amount: goal.targetAmount ?? 0, size: 10, color: .white.opacity(0.5))
+                }
+                
+                // Neon Progress Bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.08))
+                        
+                        // Inner Glow Layer
+                        Capsule()
+                            .fill(Color.white.opacity(0.2))
+                            .blur(radius: 2)
+                            .frame(width: geo.size.width * CGFloat(progress))
+                        
+                        // Main Bar
+                        Capsule()
+                            .fill(.white)
+                            .frame(width: geo.size.width * CGFloat(progress))
+                            .shadow(color: .white.opacity(0.5), radius: 4, x: 0, y: 0)
+                    }
+                }
+                .frame(height: 5)
+            }
+        }
+        .padding(20)
+        .frame(width: 175)
+        .background(
+            ZStack {
+                // Background Gradient
+                Theme.goalGradient(index: index)
+                    .opacity(0.9)
+                
+                // Glass Effect
+                RoundedRectangle(cornerRadius: 30)
+                    .fill(.ultraThinMaterial.opacity(0.2))
+                
+                // Subtle Top Light
+                RoundedRectangle(cornerRadius: 30)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.2), .clear, .white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 30))
+        .shadow(color: Color.black.opacity(0.4), radius: 15, x: 0, y: 10)
     }
 }
 

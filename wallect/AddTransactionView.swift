@@ -18,6 +18,7 @@ struct AddTransactionView: View {
     @State private var isExpense: Bool = true
     @State private var selectedWallet: Wallet?
     @State private var showingCategoryManager = false
+    @State private var showingDeleteAlert = false
     
     @State private var appeared = false
     
@@ -26,228 +27,299 @@ struct AddTransactionView: View {
     }
     
     private var currentColor: Color {
-        isExpense ? Theme.expense : Theme.income
+        if let cat = categories.first(where: { $0.name == selectedCategory }) {
+            return Color(hex: cat.hexColor)
+        }
+        return isExpense ? Theme.expense : Theme.income
     }
     
     var body: some View {
         ZStack {
-            // Background with dynamic subtle glow
             Theme.background.ignoresSafeArea()
             
-            Circle()
-                .fill(currentColor.opacity(0.12))
-                .blur(radius: 80)
-                .frame(width: 300, height: 300)
-                .offset(y: -250)
+            // Dynamic Glow Blobs (Synced with category)
+            ZStack {
+                Circle()
+                    .fill(currentColor.opacity(0.12))
+                    .frame(width: 400, height: 400)
+                    .blur(radius: 80)
+                    .offset(x: -150, y: -200)
+                
+                Circle()
+                    .fill(currentColor.opacity(0.08))
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 60)
+                    .offset(x: 100, y: 150)
+            }
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 0.8), value: selectedCategory)
             
             VStack(spacing: 0) {
-                // Header & Amount
-                VStack(spacing: 12) {
+                // Header & "Digital Receipt" Section
+                VStack(spacing: 16) {
                     HStack {
                         Button(action: { dismiss() }) {
                             Image(systemName: "xmark")
-                                .font(.title3.bold())
-                                .foregroundColor(Theme.textMain)
-                                .frame(width: 44, height: 44)
-                                .background(Theme.cardBackground.opacity(0.5))
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 40, height: 40)
+                                .background(Color.white.opacity(0.05))
                                 .clipShape(Circle())
                         }
                         
                         Spacer()
                         
-                        // Type Switcher (Modern Minimalist)
-                        HStack(spacing: 4) {
-                            Text("Pengeluaran")
-                                .font(.system(size: 13, weight: .bold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(isExpense ? Theme.expense : Color.clear)
-                                .foregroundColor(isExpense ? .black : Theme.textSecondary)
-                                .cornerRadius(12)
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.4)) { isExpense = true }
-                                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                                }
+                        // Transaction Type Indicator
+                        HStack(spacing: 8) {
+                            Text(isExpense ? "PENGELUARAN" : "PEMASUKAN")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundColor(.white.opacity(0.6))
+                                .tracking(1.5)
                             
-                            Text("Pemasukan")
-                                .font(.system(size: 13, weight: .bold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(!isExpense ? Theme.income : Color.clear)
-                                .foregroundColor(!isExpense ? .black : Theme.textSecondary)
-                                .cornerRadius(12)
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.4)) { isExpense = false }
-                                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                                }
-                        }
-                        .padding(4)
-                        .background(Theme.cardBackground.opacity(0.8))
-                        .cornerRadius(16)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    
-                    // Large Amount Display
-                    VStack(spacing: 4) {
-                        Text(CurrencyFormatter.formatRawString(amount))
-                            .font(.system(size: 54, weight: .bold, design: .rounded))
-                            .foregroundColor(currentColor)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
-                            .contentTransition(.numericText())
-                        
-                        Text(isExpense ? "Total Pengeluaran" : "Total Pemasukan")
-                            .font(.caption2.bold())
-                            .foregroundColor(Theme.textSecondary)
-                            .tracking(2)
-                            .textCase(.uppercase)
-                    }
-                    .padding(.vertical, 20)
-                }
-                .padding(.bottom, 10)
-                .background(
-                    Theme.cardBackground.opacity(0.2)
-                        .background(.ultraThinMaterial)
-                        .mask(RoundedRectangle(cornerRadius: 30, style: .continuous))
-                )
-                .clipShape(RoundedCorner(radius: 35, corners: [.bottomLeft, .bottomRight]))
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 25) {
-                        // Section 1: Transaction Details
-                        VStack(spacing: 12) {
-                            ModernInputField(icon: "pencil", placeholder: "Untuk apa?", text: $title)
-                            
-                            HStack(spacing: 12) {
-                                // Date Picker (Minimal)
-                                HStack {
-                                    Image(systemName: "calendar")
-                                        .foregroundColor(currentColor)
-                                    DatePicker("", selection: $date, displayedComponents: .date)
-                                        .labelsHidden()
-                                        .colorScheme(.dark)
-                                }
-                                .padding(.horizontal, 16)
-                                .frame(height: 54)
-                                .background(Theme.cardBackground.opacity(0.5))
-                                .cornerRadius(16)
-                                
-                                // Category Manager Trigger
-                                ModernInputField(icon: "note.text", placeholder: "Catatan...", text: $notes)
+                            if editTransaction != nil {
+                                Circle()
+                                    .fill(Theme.accent)
+                                    .frame(width: 4, height: 4)
+                                Text("VIRTUAL RECEIPT")
+                                    .font(.system(size: 10, weight: .black))
+                                    .foregroundColor(Theme.accent)
+                                    .tracking(1)
                             }
                         }
-                        .padding(.horizontal)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    
+                    // Large Receipt Card
+                    ZStack {
+                        // Background Faded Icon
+                        if let cat = categories.first(where: { $0.name == selectedCategory }) {
+                            Image(systemName: cat.icon)
+                                .font(.system(size: 80))
+                                .foregroundColor(currentColor.opacity(0.05))
+                                .offset(x: 100, y: -20)
+                        }
                         
-                        // Section 2: Wallet Selection
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Dompet Pembayaran")
-                                .font(.caption.bold())
-                                .foregroundColor(Theme.textSecondary)
-                                .padding(.horizontal, 25)
+                        VStack(spacing: 6) {
+                            Text(CurrencyFormatter.formatRawString(amount))
+                                .font(.system(size: 38, weight: .black, design: .rounded))
+                                .foregroundColor(.white)
+                                .monospacedDigit()
+                                .minimumScaleFactor(0.5)
+                                .lineLimit(1)
+                            
+                            HStack(spacing: 6) {
+                                if editTransaction?.syncStatus == "synced" {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(Theme.accent)
+                                }
+                                Text(editTransaction == nil ? "TRANSAKSI BARU" : "DETAIL TRANSAKSI")
+                                    .font(.system(size: 11, weight: .black))
+                                    .foregroundColor(Theme.textSecondary)
+                                    .tracking(1.5)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 30)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        ZStack {
+                            Color.white.opacity(0.02)
+                            RoundedRectangle(cornerRadius: 32)
+                                .stroke(
+                                    LinearGradient(colors: [.white.opacity(0.15), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                    lineWidth: 1
+                                )
+                        }
+                    )
+                    .cornerRadius(32)
+                    .padding(.horizontal, 24)
+                }
+                .padding(.bottom, 24)
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 28) {
+                        // Section: Category Selection
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Text("PILIH KATEGORI")
+                                    .font(.system(size: 10, weight: .black))
+                                    .foregroundColor(Theme.textSecondary)
+                                    .tracking(1.5)
+                                Spacer()
+                                
+                                // Income/Expense Toggle (Compact)
+                                HStack(spacing: 0) {
+                                    Button(action: { withAnimation { isExpense = true } }) {
+                                        Image(systemName: "minus")
+                                            .font(.system(size: 10, weight: .black))
+                                            .frame(width: 28, height: 28)
+                                            .background(isExpense ? Theme.expense : Color.white.opacity(0.05))
+                                            .foregroundColor(isExpense ? .black : .white)
+                                    }
+                                    
+                                    Button(action: { withAnimation { isExpense = false } }) {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 10, weight: .black))
+                                            .frame(width: 28, height: 28)
+                                            .background(!isExpense ? Theme.income : Color.white.opacity(0.05))
+                                            .foregroundColor(!isExpense ? .black : .white)
+                                    }
+                                }
+                                .cornerRadius(8)
+                            }
+                            .padding(.horizontal, 24)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
-                                    ForEach(wallets) { wallet in
-                                        WalletGlassCard(wallet: wallet, isSelected: selectedWallet == wallet) {
-                                            selectedWallet = wallet
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                        }
-                        
-                        // Section 3: Categories
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Kategori")
-                                    .font(.caption.bold())
-                                    .foregroundColor(Theme.textSecondary)
-                                Spacer()
-                                Button(action: { showingCategoryManager = true }) {
-                                    Text("Kelola")
-                                        .font(.caption2.bold())
-                                        .foregroundColor(Theme.accent)
-                                }
-                            }
-                            .padding(.horizontal, 25)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 15) {
                                     ForEach(filteredCategories) { cat in
-                                        CategoryGlassItem(title: cat.name, icon: cat.icon, isSelected: selectedCategory == cat.name, accentColor: currentColor) {
+                                        Button(action: {
                                             selectedCategory = cat.name
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            HapticManager.shared.impact(.light)
+                                        }) {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: cat.icon)
+                                                    .font(.system(size: 12))
+                                                Text(cat.name)
+                                                    .font(.system(size: 12, weight: .bold))
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                            .background(selectedCategory == cat.name ? currentColor : Color.white.opacity(0.05))
+                                            .foregroundColor(selectedCategory == cat.name ? .black : .white)
+                                            .cornerRadius(14)
                                         }
                                     }
                                 }
-                                .padding(.horizontal, 20)
+                                .padding(.horizontal, 24)
                             }
                         }
                         
-                        // Section 4: Keypad (Integrated more cleanly)
-                        VStack(spacing: 15) {
-                            ModernKeypad(amount: $amount, accentColor: currentColor)
+                        // Section: Form Details
+                        VStack(spacing: 20) {
+                            receiptField(title: "Judul Transaksi", icon: "pencil", value: $title, placeholder: isExpense ? "Beli apa?" : "Dari mana?")
                             
-                            // Save Button
+                            HStack(spacing: 16) {
+                                // Wallet Selection
+                                Menu {
+                                    ForEach(wallets.filter { !$0.isArchived && !$0.isGoal }) { wallet in
+                                        Button(action: { selectedWallet = wallet }) {
+                                            Label(wallet.name, systemImage: wallet.icon)
+                                        }
+                                    }
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("DOMPET")
+                                            .font(.system(size: 9, weight: .black))
+                                            .foregroundColor(Theme.textSecondary)
+                                        HStack {
+                                            Image(systemName: selectedWallet?.icon ?? "wallet.pass")
+                                                .foregroundColor(Theme.accent)
+                                            Text(selectedWallet?.name ?? "Pilih...")
+                                                .font(.system(size: 13, weight: .bold))
+                                                .foregroundColor(.white)
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding()
+                                        .background(Color.white.opacity(0.02))
+                                        .cornerRadius(16)
+                                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 1))
+                                    }
+                                }
+                                
+                                // Date Selection
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("TANGGAL")
+                                        .font(.system(size: 9, weight: .black))
+                                        .foregroundColor(Theme.textSecondary)
+                                    DatePicker("", selection: $date, displayedComponents: .date)
+                                        .labelsHidden()
+                                        .colorScheme(.dark)
+                                        .padding(.vertical, 4)
+                                        .background(Color.white.opacity(0.02))
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.white.opacity(0.02))
+                                        .cornerRadius(16)
+                                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 1))
+                                }
+                            }
+                            
+                            receiptField(title: "Catatan Tambahan", icon: "note.text", value: $notes, placeholder: "Tulis catatan di sini...")
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        // Keypad (Modern Minimalist)
+                        ModernKeypad(amount: $amount, accentColor: currentColor)
+                            .padding(.top, 10)
+                        
+                        // Actions Footer
+                        VStack(spacing: 12) {
                             Button(action: saveTransaction) {
-                                Text(editTransaction == nil ? "Tambah Transaksi" : "Simpan Perubahan")
-                                    .font(.headline)
+                                Text(editTransaction == nil ? "KONFIRMASI" : "SIMPAN PERUBAHAN")
+                                    .font(.system(size: 16, weight: .black))
                                     .foregroundColor(.black)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(currentColor)
-                                    .cornerRadius(18)
-                                    .shadow(color: currentColor.opacity(0.35), radius: 15, x: 0, y: 8)
+                                    .padding(.vertical, 18)
+                                    .background(amount == "0" || title.isEmpty ? Color.white.opacity(0.1) : currentColor)
+                                    .cornerRadius(20)
+                                    .shadow(color: currentColor.opacity(0.2), radius: 15)
                             }
-                            .padding(.horizontal)
-                            .padding(.bottom, 20)
-                            .disabled(amount == "0" || title.isEmpty || selectedWallet == nil)
-                            .opacity((amount == "0" || title.isEmpty || selectedWallet == nil) ? 0.3 : 1)
+                            .disabled(amount == "0" || title.isEmpty)
+                            
+                            if editTransaction != nil {
+                                Button(action: { showingDeleteAlert = true }) {
+                                    Text("Hapus Transaksi")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(.red.opacity(0.8))
+                                }
+                                .padding(.top, 8)
+                            }
                         }
+                        .padding(24)
                     }
-                    .padding(.top, 20)
                 }
             }
         }
-        .sheet(isPresented: $showingCategoryManager) {
-            CategoryManagerView()
+        .alert("Hapus Transaksi?", isPresented: $showingDeleteAlert) {
+            Button("Batal", role: .cancel) { }
+            Button("Hapus", role: .destructive) { deleteTransaction() }
+        } message: {
+            Text("Data ini akan dihapus secara permanen dari akun Kamu.")
         }
         .onAppear {
             setupForEdit()
             ensureDefaultWallet()
-            ensureDefaultCategories()
             withAnimation(.easeOut(duration: 0.5)) { appeared = true }
         }
     }
     
-    // Core Logics (Same as before but linked to UI)
-    private func ensureDefaultCategories() {
-        if categories.isEmpty {
-            let defaults = [
-                Category(name: "Food", icon: "fork.knife", isExpense: true),
-                Category(name: "Shopping", icon: "cart.fill", isExpense: true),
-                Category(name: "Transport", icon: "car.fill", isExpense: true),
-                Category(name: "Work", icon: "briefcase.fill", isExpense: false),
-                Category(name: "Gift", icon: "gift.fill", isExpense: false),
-                Category(name: "Other", icon: "dollarsign.circle", isExpense: true)
-            ]
-            for cat in defaults { modelContext.insert(cat) }
-        }
-        if selectedCategory == "Other" && !filteredCategories.isEmpty {
-             if let first = filteredCategories.first { selectedCategory = first.name }
+    private func receiptField(title: String, icon: String, value: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title.uppercased())
+                .font(.system(size: 9, weight: .black))
+                .foregroundColor(Theme.textSecondary)
+                .tracking(1.5)
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(currentColor.opacity(0.7))
+                TextField(placeholder, text: value)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .padding()
+            .background(Color.white.opacity(0.02))
+            .cornerRadius(16)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 1))
         }
     }
     
     private func ensureDefaultWallet() {
-        if wallets.isEmpty {
-            let defaultWallet = Wallet(name: "Dompet Utama", type: .cash, initialBalance: 0)
-            WalletService.shared.createWallet(defaultWallet, context: modelContext)
-            selectedWallet = defaultWallet
-        } else if selectedWallet == nil {
-            selectedWallet = wallets.first
+        if selectedWallet == nil {
+            if let first = wallets.first {
+                selectedWallet = first
+            }
         }
     }
     
@@ -264,7 +336,12 @@ struct AddTransactionView: View {
     }
     
     private func saveTransaction() {
-        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        if isExpense {
+            HapticManager.shared.impact(.heavy)
+        } else {
+            HapticManager.shared.notification(.success)
+        }
+        
         let finalAmount = CurrencyFormatter.toDouble(amount)
         if let transaction = editTransaction {
             transaction.title = title
@@ -284,83 +361,19 @@ struct AddTransactionView: View {
         }
         dismiss()
     }
+    
+    private func deleteTransaction() {
+        if let transaction = editTransaction {
+            let id = transaction.id
+            modelContext.delete(transaction)
+            SyncManager.shared.enqueue(endpoint: "transactions/\(id)", method: .delete, context: modelContext)
+            dismiss()
+        }
+    }
 }
 
 // MARK: - Reusable Components (Refined)
 
-struct ModernInputField: View {
-    let icon: String
-    let placeholder: String
-    @Binding var text: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(Theme.accent.opacity(0.7))
-                .frame(width: 20)
-            TextField(placeholder, text: $text)
-                .foregroundColor(.white)
-        }
-        .padding(.horizontal, 16)
-        .frame(height: 54)
-        .background(Theme.cardBackground.opacity(0.5))
-        .cornerRadius(16)
-    }
-}
-
-struct WalletGlassCard: View {
-    let wallet: Wallet
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: wallet.icon)
-                    .font(.system(size: 12, weight: .bold))
-                Text(wallet.name)
-                    .font(.system(size: 13, weight: .bold))
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(isSelected ? Theme.accent : Theme.cardBackground.opacity(0.3))
-            .foregroundColor(isSelected ? .black : Theme.textSecondary)
-            .cornerRadius(15)
-            .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(isSelected ? Theme.accent.opacity(0.5) : Color.white.opacity(0.05), lineWidth: 1)
-            )
-        }
-    }
-}
-
-struct CategoryGlassItem: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let accentColor: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? accentColor : Theme.cardBackground.opacity(0.4))
-                        .frame(width: 54, height: 54)
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(isSelected ? .black : Theme.textSecondary)
-                }
-                Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isSelected ? accentColor : Theme.textSecondary)
-            }
-        }
-    }
-}
-
-// RoundedCorner helper for top layout
 struct RoundedCorner: Shape {
     var radius: CGFloat = .infinity
     var corners: UIRectCorner = .allCorners
@@ -382,35 +395,43 @@ struct ModernKeypad: View {
     ]
     
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             ForEach(buttons, id: \.self) { row in
-                HStack(spacing: 14) {
+                HStack(spacing: 12) {
                     ForEach(row, id: \.self) { button in
                         Button(action: { handleInput(button) }) {
-                            Group {
-                                if button == "delete.left" {
-                                    Image(systemName: button)
-                                        .font(.system(size: 20, weight: .medium))
-                                } else {
-                                    Text(button)
-                                        .font(.system(size: 22, weight: .medium, design: .rounded))
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(Color.white.opacity(0.04))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 18)
+                                            .stroke(Color.white.opacity(0.04), lineWidth: 1)
+                                    )
+                                
+                                Group {
+                                    if button == "delete.left" {
+                                        Image(systemName: button)
+                                            .font(.system(size: 18, weight: .bold))
+                                            .foregroundColor(.white.opacity(0.6))
+                                    } else {
+                                        Text(button)
+                                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                                            .foregroundColor(.white)
+                                    }
                                 }
                             }
-                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Theme.cardBackground.opacity(0.3))
-                            .cornerRadius(14)
+                            .frame(height: 54)
                         }
                     }
                 }
             }
         }
-        .padding(.horizontal, 25)
+        .padding(.horizontal, 40)
     }
     
     private func handleInput(_ symbol: String) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.shared.impact(.light)
         if symbol == "delete.left" {
             if amount.count > 1 { amount.removeLast() } else { amount = "0" }
         } else if symbol == "000" {
@@ -420,8 +441,4 @@ struct ModernKeypad: View {
             else if amount.count < 11 { amount += symbol }
         }
     }
-}
-
-#Preview {
-    AddTransactionView()
 }

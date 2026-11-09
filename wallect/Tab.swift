@@ -5,7 +5,7 @@ enum Tab: String, CaseIterable {
     case analytics = "chart.pie.fill"
     case add = "plus" // Special central tab
     case wallets = "creditcard.fill"
-    case settings = "gearshape.fill"
+    case categories = "square.grid.2x2.fill"
     
     var title: String {
         switch self {
@@ -13,7 +13,7 @@ enum Tab: String, CaseIterable {
         case .analytics: return "Analisis"
         case .add: return ""
         case .wallets: return "Dompet"
-        case .settings: return "Pengaturan"
+        case .categories: return "Kategori"
         }
     }
 }

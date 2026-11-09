@@ -1,6 +1,8 @@
 import Foundation
 
 struct CurrencyFormatter {
+    static let currencySymbol = "Rp"
+    
     private static let formatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency

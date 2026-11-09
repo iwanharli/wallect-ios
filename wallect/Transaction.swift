@@ -24,6 +24,14 @@ final class Transaction {
         self.wallet = wallet
     }
     
+    var isSystem: Bool {
+        let lowerTitle = title.lowercased()
+        return lowerTitle.contains("alokasi") || 
+               lowerTitle.contains("pengembalian") || 
+               lowerTitle.contains("saldo awal") ||
+               category.lowercased() == "sistem"
+    }
+    
     func toDTO() -> TransactionDTO {
         TransactionDTO(
             id: id,

@@ -6,6 +6,9 @@ class PersistenceService {
     
     @MainActor
     func clearAllData(context: ModelContext) {
+        print("DEBUG: [PersistenceService] clearAllData called! This will delete EVERY record (budgets, wallets, transactions).")
+        // Get call stack or at least log the trigger if possible? Not easy in Swift.
+        
         do {
             // Delete all transactions
             try context.delete(model: Transaction.self)
@@ -23,7 +26,7 @@ class PersistenceService {
             try context.delete(model: SyncOperation.self)
             
             try context.save()
-            print("Local data cleared successfully.")
+            print("Local data cleared successfully (Budgets, Wallets, Transactions, SyncOps).")
         } catch {
             print("Failed to clear local data: \(error)")
         }

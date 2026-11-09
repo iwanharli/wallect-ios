@@ -9,10 +9,40 @@
 /* Begin PBXBuildFile section */
 		283EFC7B2F802DD500C97718 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 283EFC7A2F802DD500C97718 /* GoogleSignIn */; };
 		283EFC7D2F802DD500C97718 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 283EFC7C2F802DD500C97718 /* GoogleSignInSwift */; };
+		283EFCDF2F82E62600C97718 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 283EFCDE2F82E62600C97718 /* WidgetKit.framework */; };
+		283EFCE12F82E62600C97718 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 283EFCE02F82E62600C97718 /* SwiftUI.framework */; };
+		283EFCF22F82E62700C97718 /* WallectWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 283EFCDC2F82E62600C97718 /* WallectWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		283EFCF02F82E62700C97718 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 283E935E2F80095A00C97718 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 283EFCDB2F82E62600C97718;
+			remoteInfo = WallectWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		283EFCF72F82E62700C97718 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				283EFCF22F82E62700C97718 /* WallectWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		283E93662F80095A00C97718 /* wallect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = wallect.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		283EFCDC2F82E62600C97718 /* WallectWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WallectWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		283EFCDE2F82E62600C97718 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		283EFCE02F82E62600C97718 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -23,6 +53,64 @@
 			);
 			target = 283E93652F80095A00C97718 /* wallect */;
 		};
+		283EFCF62F82E62700C97718 /* Exceptions for "WallectWidget" folder in "WallectWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 283EFCDB2F82E62600C97718 /* WallectWidgetExtension */;
+		};
+		283EFD392F82EE2D00C97718 /* Exceptions for "wallect" folder in "WallectWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AddTransactionView.swift,
+				AllTransactionsView.swift,
+				AnalyticsView.swift,
+				CategoryManagerView.swift,
+				ContentView.swift,
+				HomeView.swift,
+				Info.plist,
+				Models/NavigationState.swift,
+				Networking/APIClient.swift,
+				Networking/AuthManager.swift,
+				Networking/BiometricAuthService.swift,
+				Networking/PersistenceService.swift,
+				Networking/SyncQueue.swift,
+				Networking/SyncService.swift,
+				Networking/TransactionService.swift,
+				Networking/WalletService.swift,
+				ProfileView.swift,
+				Tab.swift,
+				Views/Analytics/AnalyticsCharts.swift,
+				Views/Analytics/AnalyticsComponents.swift,
+				Views/Analytics/AnalyticsModels.swift,
+				Views/Analytics/AnalyticsSkeletonView.swift,
+				Views/Auth/BiometricLockView.swift,
+				Views/Auth/LoginView.swift,
+				Views/BudgetComponents.swift,
+				Views/BudgetDetailView.swift,
+				Views/BudgetHistoryView.swift,
+				Views/Categories/CategorySkeletonView.swift,
+				Views/Common/ProfileImageView.swift,
+				Views/Common/Skeletons.swift,
+				Views/Debt/DebtComponents.swift,
+				Views/Debt/DebtEditorSheet.swift,
+				Views/Debt/DebtListView.swift,
+				Views/EmptyStateView.swift,
+				Views/FilterChip.swift,
+				Views/Home/HomeSkeletonView.swift,
+				Views/SplashScreenView.swift,
+				Views/StocksDummyView.swift,
+				Views/StocksEditorSheets.swift,
+				Views/TransferView.swift,
+				Views/UnifiedHeaderCard.swift,
+				Views/WalletDetailView.swift,
+				Views/Wallets/WalletsSkeletonView.swift,
+				wallectApp.swift,
+				WalletsView.swift,
+			);
+			target = 283EFCDB2F82E62600C97718 /* WallectWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -30,8 +118,17 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				283EFC7F2F802FB100C97718 /* Exceptions for "wallect" folder in "wallect" target */,
+				283EFD392F82EE2D00C97718 /* Exceptions for "wallect" folder in "WallectWidgetExtension" target */,
 			);
 			path = wallect;
+			sourceTree = "<group>";
+		};
+		283EFCE22F82E62600C97718 /* WallectWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				283EFCF62F82E62700C97718 /* Exceptions for "WallectWidget" folder in "WallectWidgetExtension" target */,
+			);
+			path = WallectWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -46,6 +143,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		283EFCD92F82E62600C97718 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				283EFCE12F82E62600C97718 /* SwiftUI.framework in Frameworks */,
+				283EFCDF2F82E62600C97718 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -53,6 +159,8 @@
 			isa = PBXGroup;
 			children = (
 				283E93682F80095A00C97718 /* wallect */,
+				283EFCE22F82E62600C97718 /* WallectWidget */,
+				283EFCDD2F82E62600C97718 /* Frameworks */,
 				283E93672F80095A00C97718 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,8 +169,18 @@
 			isa = PBXGroup;
 			children = (
 				283E93662F80095A00C97718 /* wallect.app */,
+				283EFCDC2F82E62600C97718 /* WallectWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		283EFCDD2F82E62600C97718 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				283EFCDE2F82E62600C97718 /* WidgetKit.framework */,
+				283EFCE02F82E62600C97718 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -75,10 +193,12 @@
 				283E93622F80095A00C97718 /* Sources */,
 				283E93632F80095A00C97718 /* Frameworks */,
 				283E93642F80095A00C97718 /* Resources */,
+				283EFCF72F82E62700C97718 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				283EFCF12F82E62700C97718 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				283E93682F80095A00C97718 /* wallect */,
@@ -92,6 +212,29 @@
 			productReference = 283E93662F80095A00C97718 /* wallect.app */;
 			productType = "com.apple.product-type.application";
 		};
+		283EFCDB2F82E62600C97718 /* WallectWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 283EFCF32F82E62700C97718 /* Build configuration list for PBXNativeTarget "WallectWidgetExtension" */;
+			buildPhases = (
+				283EFCD82F82E62600C97718 /* Sources */,
+				283EFCD92F82E62600C97718 /* Frameworks */,
+				283EFCDA2F82E62600C97718 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				283E93682F80095A00C97718 /* wallect */,
+				283EFCE22F82E62600C97718 /* WallectWidget */,
+			);
+			name = WallectWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = WallectWidgetExtension;
+			productReference = 283EFCDC2F82E62600C97718 /* WallectWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -103,6 +246,9 @@
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					283E93652F80095A00C97718 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					283EFCDB2F82E62600C97718 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -125,12 +271,20 @@
 			projectRoot = "";
 			targets = (
 				283E93652F80095A00C97718 /* wallect */,
+				283EFCDB2F82E62600C97718 /* WallectWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		283E93642F80095A00C97718 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		283EFCDA2F82E62600C97718 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -147,7 +301,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		283EFCD82F82E62600C97718 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		283EFCF12F82E62700C97718 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 283EFCDB2F82E62600C97718 /* WallectWidgetExtension */;
+			targetProxy = 283EFCF02F82E62700C97718 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		283E936F2F80095C00C97718 /* Debug */ = {
@@ -274,6 +443,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = wallect/wallect.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = GR7GYN3MB9;
@@ -308,6 +478,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = wallect/wallect.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = GR7GYN3MB9;
@@ -337,6 +508,70 @@
 			};
 			name = Release;
 		};
+		283EFCF42F82E62700C97718 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WallectWidget/WallectWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GR7GYN3MB9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WallectWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WallectWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harli..wallect.WallectWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "WIDGET_EXTENSION $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		283EFCF52F82E62700C97718 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WallectWidget/WallectWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GR7GYN3MB9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WallectWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WallectWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harli..wallect.WallectWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "WIDGET_EXTENSION $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -354,6 +589,15 @@
 			buildConfigurations = (
 				283E93722F80095C00C97718 /* Debug */,
 				283E93732F80095C00C97718 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		283EFCF32F82E62700C97718 /* Build configuration list for PBXNativeTarget "WallectWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				283EFCF42F82E62700C97718 /* Debug */,
+				283EFCF52F82E62700C97718 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

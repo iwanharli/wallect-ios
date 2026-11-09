@@ -4,6 +4,7 @@ enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
     case put = "PUT"
+    case patch = "PATCH"
     case delete = "DELETE"
 }
 
@@ -11,7 +12,7 @@ enum APIError: LocalizedError {
     case invalidURL
     case networkError(Error)
     case unauthorized
-    case serverError(Int)
+    case serverError(Int, Data?)
     case decodingError(Error)
     
     var errorDescription: String? {
@@ -19,7 +20,7 @@ enum APIError: LocalizedError {
         case .invalidURL: return "URL tidak valid."
         case .networkError(let error): return "Gagal terhubung ke server: \(error.localizedDescription)"
         case .unauthorized: return "Sesi telah berakhir atau tidak valid."
-        case .serverError(let code): return "Kesalahan server dengan kode \(code)."
+        case .serverError(let code, _): return "Kesalahan server dengan kode \(code)."
         case .decodingError(let error): return "Gagal membaca respons dari server: \(error.localizedDescription)"
         }
     }
@@ -28,7 +29,7 @@ enum APIError: LocalizedError {
 class APIClient {
     static let shared = APIClient()
     
-    private let baseURL = URL(string: "http://192.168.0.21:3000")! // Update to actual server IP for real device
+    private let baseURL = URL(string: "http://192.168.0.21:3001")! // Update to actual server IP for real device
     private let session = URLSession.shared
     
     private var jwtToken: String? {
@@ -58,7 +59,9 @@ class APIClient {
         request.httpMethod = method.rawValue
         
         // Headers
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        if body != nil {
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
         if let token = jwtToken {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
@@ -67,8 +70,16 @@ class APIClient {
         if let body = body {
             if let dataBody = body as? Data {
                 request.httpBody = dataBody
+                // DEBUG: Log the raw body payload
+                if let jsonString = String(data: dataBody, encoding: .utf8) {
+                    print("DEBUG: [APIClient] REQUEST \(method.rawValue) \(endpoint) Payload: \(jsonString)")
+                }
             } else {
-                request.httpBody = try jsonEncoder.encode(body)
+                let encodedBody = try jsonEncoder.encode(body)
+                request.httpBody = encodedBody
+                if let jsonString = String(data: encodedBody, encoding: .utf8) {
+                    print("DEBUG: [APIClient] REQUEST \(method.rawValue) \(endpoint) Payload: \(jsonString)")
+                }
             }
         }
         
@@ -85,7 +96,7 @@ class APIClient {
         }
         
         if !(200...299).contains(httpResponse.statusCode) {
-            throw APIError.serverError(httpResponse.statusCode)
+            throw APIError.serverError(httpResponse.statusCode, data)
         }
         
         // Decode

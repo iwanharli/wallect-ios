@@ -3,27 +3,15 @@ import SwiftData
 import SwiftUI
 import Combine
 
-@Model
-final class SyncOperation {
-    var id: UUID
-    var endpoint: String
-    var method: String
-    var body: Data?
-    var createdAt: Date
-    
-    init(endpoint: String, method: String, body: Data? = nil) {
-        self.id = UUID()
-        self.endpoint = endpoint
-        self.method = method
-        self.body = body
-        self.createdAt = Date()
-    }
-}
-
+@MainActor
 class SyncManager: ObservableObject {
     static let shared = SyncManager()
     
     private let apiClient = APIClient.shared
+    @Published var isSyncing = false
+    @Published var lastError: String?
+    
+    private init() {}
     
     @MainActor
     func enqueue(endpoint: String, method: HTTPMethod, body: (any Codable)? = nil, context: ModelContext) {
@@ -33,41 +21,65 @@ class SyncManager: ObservableObject {
         
         let operation = SyncOperation(endpoint: endpoint, method: method.rawValue, body: bodyData)
         context.insert(operation)
+        try? context.save()
         
-        // Process queue immediately on the MainActor
-        Task { @MainActor in
-            await processQueue(context: context)
-        }
+        Task { await processQueue(context: context) }
     }
     
     @MainActor
     func processQueue(context: ModelContext) async {
-        let fetchDescriptor = FetchDescriptor<SyncOperation>(sortBy: [SortDescriptor(\.createdAt)])
+        // Prevent concurrent syncs
+        guard !isSyncing else { return }
         
-        guard let operations = try? context.fetch(fetchDescriptor) else { return }
+        let fetchDescriptor = FetchDescriptor<SyncOperation>(sortBy: [SortDescriptor(\.createdAt)])
+        guard let operations = try? context.fetch(fetchDescriptor), !operations.isEmpty else { 
+            return 
+        }
+        
+        isSyncing = true
+        defer { isSyncing = false }
+        
+        print("DEBUG: [SyncManager] Starting sync for \(operations.count) items...")
         
         for operation in operations {
+            let method = HTTPMethod(rawValue: operation.method) ?? .post
+            
             do {
-                // Try executing the network call
-                let _: APIResponse = try await apiClient.request(
+                let _: BlankResponse = try await apiClient.request(
                     endpoint: operation.endpoint,
-                    method: HTTPMethod(rawValue: operation.method) ?? .post,
+                    method: method,
                     body: operation.body
                 )
                 
-                // Success - remove from queue
+                self.lastError = nil
                 context.delete(operation)
+                try? context.save()
+                print("DEBUG: [SyncManager] Sync SUCCESS: \(operation.endpoint)")
+            } catch let error as APIError {
+                if case .unauthorized = error {
+                    self.lastError = "Sesi berakhir. Silakan login kembali."
+                    break
+                }
+                
+                if case .serverError(let code, _) = error, code == 400 {
+                    print("DEBUG: [SyncManager] PERMANENT ERROR (400) for \(operation.endpoint). Removing from queue.")
+                    context.delete(operation)
+                    try? context.save()
+                    continue // Don't block subsequent items
+                }
+                
+                // Stop queue on other network/server errors to maintain order
+                print("DEBUG: [SyncManager] Sync PAUSED (Network/Server \(error.localizedDescription)): \(error.localizedDescription)")
+                self.lastError = "Kesalahan jaringan: \(error.localizedDescription)"
+                break 
             } catch {
-                // Failure - report to server so we can see the exact cause
-                let errStr = String(describing: error).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "unknown_error"
-                print("Sync failed: \(error)")
-                break // Stop processing for now to avoid order issues
+                print("DEBUG: [SyncManager] Unknown error: \(error)")
+                break
             }
         }
+        
+        print("DEBUG: [SyncManager] Sync cycle finished.")
     }
 }
 
-struct APIResponse: Codable {
-    var success: Bool?
-    var message: String?
-}
+struct BlankResponse: Codable {}

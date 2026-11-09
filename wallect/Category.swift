@@ -7,12 +7,14 @@ final class Category {
     var name: String
     var icon: String
     var isExpense: Bool
+    var hexColor: String = "A8DADC"
     var syncStatus: String = "synced"
     
-    init(id: String = UUID().uuidString, name: String, icon: String, isExpense: Bool = true) {
+    init(id: String = UUID().uuidString, name: String, icon: String, hexColor: String = "A8DADC", isExpense: Bool = true) {
         self.id = id
         self.name = name
         self.icon = icon
+        self.hexColor = hexColor
         self.isExpense = isExpense
     }
 
@@ -21,6 +23,7 @@ final class Category {
             id: id,
             name: name,
             icon: icon,
+            hexColor: hexColor,
             isExpense: isExpense
         )
     }
